@@ -47,7 +47,7 @@ struct DashboardView: View {
 
                 HStack {
                     FinanceSummaryCard(
-                        icon: "creditcard",
+                        icon: "wallet.pass",
                         title: "All Accounts",
                         amount: summaryTotal(for: .all),
                         gradientStart: AppColors.blue,
@@ -65,6 +65,19 @@ struct DashboardView: View {
                         gradientEnd: AppColors.teal
                     )
                     .overlay(selectionOverlay(isSelected: selectedSummary == .debitCard, accent: AppColors.teal))
+                    .overlay(alignment: .topTrailing) {
+                        Button {
+                            accountToEdit = .debitCard
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(Color.black.opacity(0.25))
+                                .clipShape(Circle())
+                        }
+                        .padding(10)
+                    }
                     .padding(.horizontal, 8)
                     .onTapGesture { selectedSummary = .debitCard }
                     .onLongPressGesture { accountToEdit = .debitCard }
@@ -78,18 +91,44 @@ struct DashboardView: View {
                         gradientEnd: AppColors.coral
                     )
                     .overlay(selectionOverlay(isSelected: selectedSummary == .creditCard, accent: AppColors.coral))
+                    .overlay(alignment: .topTrailing) {
+                        Button {
+                            accountToEdit = .creditCard
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(Color.black.opacity(0.25))
+                                .clipShape(Circle())
+                        }
+                        .padding(10)
+                    }
                     .padding(.horizontal, 8)
                     .onTapGesture { selectedSummary = .creditCard }
                     .onLongPressGesture { accountToEdit = .creditCard }
 
                     FinanceSummaryCard(
-                        icon: "piggy.bank",
+                        icon: "dollarsign.circle.fill",
                         title: "Savings",
                         amount: summaryTotal(for: .savings),
                         gradientStart: AppColors.purple,
                         gradientEnd: AppColors.lavender
                     )
                     .overlay(selectionOverlay(isSelected: selectedSummary == .savings, accent: AppColors.lavender))
+                    .overlay(alignment: .topTrailing) {
+                        Button {
+                            accountToEdit = .savings
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(Color.black.opacity(0.25))
+                                .clipShape(Circle())
+                        }
+                        .padding(10)
+                    }
                     .padding(.horizontal, 8)
                     .onTapGesture { selectedSummary = .savings }
                     .onLongPressGesture { accountToEdit = .savings }
