@@ -4,6 +4,7 @@ import SwiftUI
 enum TransactionCategory: Hashable {
     case expense(SpendingCategory)
     case income(IncomeCategory)
+    case custom(String)
 
     var typeRaw: String {
         switch self {
@@ -11,6 +12,8 @@ enum TransactionCategory: Hashable {
             return "expense"
         case .income:
             return "income"
+        case .custom:
+            return "custom"
         }
     }
 
@@ -20,6 +23,8 @@ enum TransactionCategory: Hashable {
             return category.rawValue
         case .income(let category):
             return category.rawValue
+        case .custom(let name):
+            return name
         }
     }
 
@@ -31,6 +36,9 @@ enum TransactionCategory: Hashable {
         case "income":
             guard let category = IncomeCategory(rawValue: rawValue) else { return nil }
             self = .income(category)
+        case "custom":
+            let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            self = .custom(trimmed.isEmpty ? "Custom" : trimmed)
         default:
             return nil
         }
@@ -42,6 +50,8 @@ enum TransactionCategory: Hashable {
             return category.title
         case .income(let category):
             return category.title
+        case .custom(let name):
+            return name
         }
     }
 
@@ -51,6 +61,8 @@ enum TransactionCategory: Hashable {
             return category.iconName
         case .income(let category):
             return category.iconName
+        case .custom:
+            return "tag"
         }
     }
 
@@ -60,6 +72,8 @@ enum TransactionCategory: Hashable {
             return category.accentColor
         case .income(let category):
             return category.accentColor
+        case .custom:
+            return AppColors.blue
         }
     }
 
@@ -69,6 +83,8 @@ enum TransactionCategory: Hashable {
             return category.iconBackground
         case .income(let category):
             return category.iconBackground
+        case .custom:
+            return AppColors.blue.opacity(0.18)
         }
     }
 }

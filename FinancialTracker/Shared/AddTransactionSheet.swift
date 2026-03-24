@@ -8,10 +8,12 @@ struct AddTransactionSheet: View {
 
     @State private var transactionType: TransactionType = .expense
     @State private var account: AccountType = .debitCard
-    @State private var expenseCategory: SpendingCategory = .foodAndDining
-    @State private var incomeCategory: IncomeCategory = .salary
+    @State private var expenseSelection: ExpenseCategorySelection = .predefined(.foodAndDining)
+    @State private var incomeSelection: IncomeCategorySelection = .predefined(.salary)
     @State private var amountValue: Decimal = 0
     @State private var descriptionText: String = ""
+    @State private var transactionDate: Date = Date()
+    @State private var customCategoryName: String = ""
     private let existingTransaction: TransactionItem?
 
     // Initialize for create or edit flows.
@@ -24,17 +26,31 @@ struct AddTransactionSheet: View {
         _account = State(initialValue: existingTransaction?.account ?? .debitCard)
         switch existingTransaction?.category {
         case .expense(let category):
-            _expenseCategory = State(initialValue: category)
-            _incomeCategory = State(initialValue: .salary)
+            _expenseSelection = State(initialValue: .predefined(category))
+            _incomeSelection = State(initialValue: .predefined(.salary))
         case .income(let category):
-            _expenseCategory = State(initialValue: .foodAndDining)
-            _incomeCategory = State(initialValue: category)
+            _expenseSelection = State(initialValue: .predefined(.foodAndDining))
+            _incomeSelection = State(initialValue: .predefined(category))
+        case .custom(let name):
+            if existingTransaction?.type == .income {
+                _incomeSelection = State(initialValue: .custom)
+                _expenseSelection = State(initialValue: .predefined(.foodAndDining))
+            } else {
+                _expenseSelection = State(initialValue: .custom)
+                _incomeSelection = State(initialValue: .predefined(.salary))
+            }
+            _customCategoryName = State(initialValue: name)
         case .none:
-            _expenseCategory = State(initialValue: .foodAndDining)
-            _incomeCategory = State(initialValue: .salary)
+            _expenseSelection = State(initialValue: .predefined(.foodAndDining))
+            _incomeSelection = State(initialValue: .predefined(.salary))
         }
         _amountValue = State(initialValue: Decimal(existingTransaction?.amount ?? 0))
         _descriptionText = State(initialValue: existingTransaction?.subtitle ?? "")
+        if let date = existingTransaction?.date, date <= Date() {
+            _transactionDate = State(initialValue: date)
+        } else {
+            _transactionDate = State(initialValue: Date())
+        }
         self.existingTransaction = existingTransaction
     }
 
@@ -129,10 +145,11 @@ struct AddTransactionSheet: View {
                 Text("Category")
                     .font(.system(size: 16, weight: .semibold))
                 if transactionType == .expense {
-                    Picker("Category", selection: $expenseCategory) {
+                    Picker("Category", selection: $expenseSelection) {
                         ForEach(SpendingCategory.allCases, id: \.self) { category in
-                            Text(category.title).tag(category)
+                            Text(category.title).tag(ExpenseCategorySelection.predefined(category))
                         }
+                        Text("Custom").tag(ExpenseCategorySelection.custom)
                     }
                     .pickerStyle(.menu)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -140,11 +157,20 @@ struct AddTransactionSheet: View {
                     .padding(.vertical, 12)
                     .background(Color.black.opacity(0.05))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    if expenseSelection == .custom {
+                        TextField("Custom Category...", text: $customCategoryName)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
+                            .background(Color.black.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 } else {
-                    Picker("Category", selection: $incomeCategory) {
+                    Picker("Category", selection: $incomeSelection) {
                         ForEach(IncomeCategory.allCases, id: \.self) { category in
-                            Text(category.title).tag(category)
+                            Text(category.title).tag(IncomeCategorySelection.predefined(category))
                         }
+                        Text("Custom").tag(IncomeCategorySelection.custom)
                     }
                     .pickerStyle(.menu)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -152,7 +178,27 @@ struct AddTransactionSheet: View {
                     .padding(.vertical, 12)
                     .background(Color.black.opacity(0.05))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    if incomeSelection == .custom {
+                        TextField("Custom Category...", text: $customCategoryName)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
+                            .background(Color.black.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Date")
+                    .font(.system(size: 16, weight: .semibold))
+                DatePicker(
+                    "Transaction Date",
+                    selection: $transactionDate,
+                    in: ...Date(),
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(.compact)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -168,12 +214,24 @@ struct AddTransactionSheet: View {
             Button {
                 guard let amount = parsedAmount else { return }
                 let subtitle = descriptionText.isEmpty ? "No description" : descriptionText
+                let trimmedCustom = customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let customValue = trimmedCustom.isEmpty ? "Custom" : trimmedCustom
                 let category: TransactionCategory = {
                     switch transactionType {
                     case .expense:
-                        return .expense(expenseCategory)
+                        switch expenseSelection {
+                        case .predefined(let category):
+                            return .expense(category)
+                        case .custom:
+                            return .custom(customValue)
+                        }
                     case .income:
-                        return .income(incomeCategory)
+                        switch incomeSelection {
+                        case .predefined(let category):
+                            return .income(category)
+                        case .custom:
+                            return .custom(customValue)
+                        }
                     }
                 }()
                 if let transaction = existingTransaction {
@@ -183,11 +241,12 @@ struct AddTransactionSheet: View {
                     transaction.type = transactionType
                     transaction.account = account
                     transaction.category = category
+                    transaction.date = transactionDate
                 } else {
                     let transaction = TransactionItem(
                         title: category.title,
                         subtitle: subtitle,
-                        date: Date(),
+                        date: transactionDate,
                         amount: amount,
                         type: transactionType,
                         account: account,
@@ -220,6 +279,16 @@ struct AddTransactionSheet: View {
     private var isEditing: Bool {
         existingTransaction != nil
     }
+}
+
+private enum ExpenseCategorySelection: Hashable {
+    case predefined(SpendingCategory)
+    case custom
+}
+
+private enum IncomeCategorySelection: Hashable {
+    case predefined(IncomeCategory)
+    case custom
 }
 
 #Preview("Add Transaction Sheet") {

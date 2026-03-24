@@ -27,11 +27,11 @@ struct AnalyticsTabView: View {
 #Preview("Analytics Tab") {
     AnalyticsTabView(
         spends: [
-            CategorySpend(category: .shopping, amount: 270),
-            CategorySpend(category: .billsAndUtilities, amount: 200),
-            CategorySpend(category: .entertainment, amount: 85),
-            CategorySpend(category: .foodAndDining, amount: 45.5),
-            CategorySpend(category: .transportation, amount: 30)
+            CategorySpend(title: "Shopping", amount: 270, color: AppColors.purple),
+            CategorySpend(title: "Bills & Utilities", amount: 200, color: Color.black.opacity(0.65)),
+            CategorySpend(title: "Entertainment", amount: 85, color: Color.orange),
+            CategorySpend(title: "Food & Dining", amount: 45.5, color: AppColors.pink),
+            CategorySpend(title: "Transportation", amount: 30, color: AppColors.blue)
         ],
         summary: (income: 3000, expenses: 630.5, net: 2369.5)
     )

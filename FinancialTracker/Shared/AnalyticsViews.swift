@@ -3,11 +3,9 @@ import SwiftUI
 // Data model for category spend used in analytics cards.
 struct CategorySpend: Identifiable {
     let id = UUID()
-    let category: SpendingCategory
+    let title: String
     let amount: Double
-
-    var title: String { category.title }
-    var color: Color { category.accentColor }
+    let color: Color
 }
 
 struct SpendingByCategoryCard: View {

@@ -475,13 +475,23 @@ private extension DashboardView {
     // Aggregate expense totals per category for analytics.
     var analyticsSpends: [CategorySpend] {
         let expenses = filteredTransactions.filter { $0.type == .expense }
-        var totals: [SpendingCategory: Double] = [:]
+        var totals: [String: (amount: Double, color: Color)] = [:]
         for transaction in expenses {
-            guard case let .expense(category) = transaction.category else { continue }
-            totals[category, default: 0] += transaction.amount
+            switch transaction.category {
+            case .expense(let category):
+                let key = category.title
+                let entry = totals[key] ?? (0, category.accentColor)
+                totals[key] = (entry.amount + transaction.amount, entry.color)
+            case .custom(let name):
+                let key = name.isEmpty ? "Custom" : name
+                let entry = totals[key] ?? (0, AppColors.blue)
+                totals[key] = (entry.amount + transaction.amount, entry.color)
+            default:
+                continue
+            }
         }
         return totals
-            .map { CategorySpend(category: $0.key, amount: $0.value) }
+            .map { CategorySpend(title: $0.key, amount: $0.value.amount, color: $0.value.color) }
             .sorted { $0.amount > $1.amount }
     }
 
