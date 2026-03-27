@@ -208,6 +208,8 @@ struct DashboardView: View {
                             spends: analyticsSpends,
                             summary: analyticsSummary
                         )
+                    case .ai:
+                        AIInsightsTabView(context: aiInsightContext)
                     case .goals:
                         GoalsTabView(
                             goals: goals,
@@ -227,6 +229,8 @@ struct DashboardView: View {
                 switch selectedTab {
                 case .transactions, .analytics:
                     isAddTransactionPresented = true
+                case .ai:
+                    break
                 case .goals:
                     isAddGoalPresented = true
                 }
@@ -517,11 +521,71 @@ private extension DashboardView {
             return accountTotal(.savings)
         }
     }
+
+    // Context passed into Apple Intelligence generation.
+    var aiInsightContext: AIInsightsContext {
+        let current = filteredTransactions
+        let previous = transactionsForMonth(previousMonth(from: selectedMonth), summary: selectedSummary)
+
+        let income = current.filter { $0.type == .income }.map(\.amount).reduce(0, +)
+        let expense = current.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
+        let net = income - expense
+        let previousExpense = previous.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
+
+        let snapshots = current.map { transaction in
+            TransactionSnapshot(
+                title: transaction.title,
+                category: transaction.category.title,
+                type: transaction.type.rawValue,
+                amount: transaction.amount,
+                dateISO: Self.isoFormatter.string(from: transaction.date)
+            )
+        }
+
+        let previousSnapshots = previous.map { transaction in
+            TransactionSnapshot(
+                title: transaction.title,
+                category: transaction.category.title,
+                type: transaction.type.rawValue,
+                amount: transaction.amount,
+                dateISO: Self.isoFormatter.string(from: transaction.date)
+            )
+        }
+
+        return AIInsightsContext(
+            month: selectedMonth,
+            current: snapshots,
+            previous: previousSnapshots,
+            totals: MonthlyTotals(
+                income: income,
+                expense: expense,
+                net: net,
+                previousExpense: previousExpense
+            )
+        )
+    }
+
+    private func previousMonth(from date: Date) -> Date {
+        Calendar.current.date(byAdding: .month, value: -1, to: date) ?? date
+    }
+
+    private func transactionsForMonth(_ month: Date, summary: AccountSummary) -> [TransactionItem] {
+        transactionsForSummary(summary).filter { transaction in
+            Calendar.current.isDate(transaction.date, equalTo: month, toGranularity: .month)
+        }
+    }
+
+    private static let isoFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 private enum DashboardTab: String, CaseIterable, Identifiable {
     case transactions
     case analytics
+    case ai
     case goals
 
     var id: String { rawValue }
@@ -532,6 +596,8 @@ private enum DashboardTab: String, CaseIterable, Identifiable {
             return "Transactions"
         case .analytics:
             return "Analytics"
+        case .ai:
+            return "AI"
         case .goals:
             return "Goals"
         }

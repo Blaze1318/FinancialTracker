@@ -56,7 +56,8 @@ struct AddTransactionSheet: View {
 
     // Sheet UI.
     var body: some View {
-        VStack(spacing: 18) {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 18) {
             HStack {
                 Spacer()
                 Button {
@@ -266,8 +267,9 @@ struct AddTransactionSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .padding(.top, 6)
+            }
+            .padding(20)
         }
-        .padding(20)
     }
 
     // Convert the bound decimal value into a Double.
