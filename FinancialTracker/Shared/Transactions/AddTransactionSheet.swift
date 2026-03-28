@@ -10,7 +10,7 @@ struct AddTransactionSheet: View {
     @State private var account: AccountType = .debitCard
     @State private var expenseSelection: ExpenseCategorySelection = .predefined(.foodAndDining)
     @State private var incomeSelection: IncomeCategorySelection = .predefined(.salary)
-    @State private var amountValue: Decimal = 0
+    @State private var amountText: String = ""
     @State private var descriptionText: String = ""
     @State private var transactionDate: Date = Date()
     @State private var customCategoryName: String = ""
@@ -44,7 +44,11 @@ struct AddTransactionSheet: View {
             _expenseSelection = State(initialValue: .predefined(.foodAndDining))
             _incomeSelection = State(initialValue: .predefined(.salary))
         }
-        _amountValue = State(initialValue: Decimal(existingTransaction?.amount ?? 0))
+        if let amount = existingTransaction?.amount, amount > 0 {
+            _amountText = State(initialValue: AmountParsing.formattedString(from: amount))
+        } else {
+            _amountText = State(initialValue: "")
+        }
         _descriptionText = State(initialValue: existingTransaction?.subtitle ?? "")
         if let date = existingTransaction?.date, date <= Date() {
             _transactionDate = State(initialValue: date)
@@ -134,7 +138,7 @@ struct AddTransactionSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Amount")
                     .font(.system(size: 16, weight: .semibold))
-                TextField("0.00", value: $amountValue, format: .currency(code: "USD"))
+                TextField("$0.00", text: $amountText)
                     .keyboardType(.decimalPad)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 12)
@@ -213,7 +217,8 @@ struct AddTransactionSheet: View {
             }
 
             Button {
-                guard let amount = parsedAmount else { return }
+                let amount = parsedAmount
+                guard amount > 0 else { return }
                 let subtitle = descriptionText.isEmpty ? "No description" : descriptionText
                 let trimmedCustom = customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
                 let customValue = trimmedCustom.isEmpty ? "Custom" : trimmedCustom
@@ -273,8 +278,8 @@ struct AddTransactionSheet: View {
     }
 
     // Convert the bound decimal value into a Double.
-    private var parsedAmount: Double? {
-        NSDecimalNumber(decimal: amountValue).doubleValue
+    private var parsedAmount: Double {
+        AmountParsing.parse(amountText)
     }
 
     // Whether this sheet is editing an existing transaction.
@@ -292,6 +297,7 @@ private enum IncomeCategorySelection: Hashable {
     case predefined(IncomeCategory)
     case custom
 }
+
 
 #Preview("Add Transaction Sheet") {
     AddTransactionSheet(isPresented: .constant(true))

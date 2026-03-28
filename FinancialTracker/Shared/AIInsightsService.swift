@@ -113,9 +113,13 @@ final class FoundationModelsInsightsGenerator: AIInsightsGenerating {
             "\(tx.dateISO) | \(tx.type) | \(tx.category) | \(tx.title) | \(tx.amount)"
         }.joined(separator: "\n")
 
+        let expenseTotals = totalsByCategory(for: context.current, type: "expense")
+        let incomeTotals = totalsByCategory(for: context.current, type: "income")
+
         let header = """
         You are a financial assistant within a budgeting application. Generate 3–5 concise insights for the month \(monthLabel).
         Focus ONLY on this month’s spending. Carefully identify areas for improvement and offer actionable recommendations. Do not compare to previous months.
+        Do not invent numbers. Use ONLY the provided totals and category totals. If you mention a category amount, it must match the totals below exactly.
         Use SF Symbols names for iconName (e.g., chart.line.uptrend.xyaxis, lightbulb, cart, target, banknote, calendar, sparkles).
         Choose accentHex ONLY from: 9810FA, 0A0A0A, 009966, 364153, 009689, 6A7282, 000000, 4F39F6.
         Choose backgroundHex ONLY from: FFFFFF, F3F4F6.
@@ -128,7 +132,7 @@ final class FoundationModelsInsightsGenerator: AIInsightsGenerating {
         if hasCurrent {
             sections.append("""
             Current month totals:
-            income=\(context.totals.income), expense=\(context.totals.expense), net=\(context.totals.net)
+            income=\(formatAmount(context.totals.income)), expense=\(formatAmount(context.totals.expense)), net=\(formatAmount(context.totals.net))
             """)
         }
 
@@ -139,7 +143,39 @@ final class FoundationModelsInsightsGenerator: AIInsightsGenerating {
             """)
         }
 
+        if hasCurrent {
+            sections.append("""
+            Current month expense category totals (exact):
+            \(expenseTotals)
+            """)
+        }
+
+        if hasCurrent {
+            sections.append("""
+            Current month income category totals (exact):
+            \(incomeTotals)
+            """)
+        }
+
         return sections.joined(separator: "\n\n")
+    }
+
+    private func totalsByCategory(for transactions: [TransactionSnapshot], type: String) -> String {
+        let filtered = transactions.filter { $0.type == type }
+        let grouped = Dictionary(grouping: filtered, by: { $0.category })
+        let sorted = grouped.keys.sorted()
+        return sorted.map { key in
+            let total = grouped[key, default: []].reduce(0) { $0 + $1.amount }
+            return "\(key)=\(formatAmount(total))"
+        }.joined(separator: "\n")
+    }
+
+    private func formatAmount(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2
+        formatter.usesGroupingSeparator = false
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     private func decodeInsights(from response: String) throws -> [AIInsightPayload] {

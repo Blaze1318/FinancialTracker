@@ -17,7 +17,7 @@ final class Account: Identifiable {
 
     // Accessor for account type enum.
     var type: AccountType {
-        get { AccountType(rawValue: typeRaw) ?? .debitCard }
+        get { AccountType.resolve(typeRaw) }
         set { typeRaw = newValue.rawValue }
     }
 }

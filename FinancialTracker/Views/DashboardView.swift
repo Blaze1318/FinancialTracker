@@ -197,7 +197,11 @@ struct DashboardView: View {
                     case .transactions:
                         TransactionsTabView(
                             transactions: filteredTransactions,
+                            exportTransactions: transactionsForSummary(selectedSummary),
                             totalCount: filteredTransactions.count,
+                            summaryTitle: selectedSummary.title,
+                            summaryTotal: summaryTotal(for: selectedSummary),
+                            exportFilename: TransactionsCSVBuilder.defaultFilename(summaryTitle: selectedSummary.title),
                             onSelect: { transaction in
                                 actionTransaction = transaction
                                 isTransactionActionPresented = true
@@ -206,7 +210,8 @@ struct DashboardView: View {
                     case .analytics:
                         AnalyticsTabView(
                             spends: analyticsSpends,
-                            summary: analyticsSummary
+                            summary: analyticsSummary,
+                            totalForSelectedSummary: summaryTotal(for: selectedSummary)
                         )
                     case .ai:
                         AIInsightsTabView(context: aiInsightContext)

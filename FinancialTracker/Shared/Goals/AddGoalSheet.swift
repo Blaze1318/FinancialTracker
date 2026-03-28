@@ -8,8 +8,8 @@ struct AddGoalSheet: View {
     @State private var selectedEmoji: String
     @State private var selectedColorHex: String
     @State private var name: String
-    @State private var targetAmount: Decimal
-    @State private var currentAmount: Decimal
+    @State private var targetAmountText: String
+    @State private var currentAmountText: String
     @State private var hasDeadline: Bool
     @State private var deadline: Date
 
@@ -22,8 +22,16 @@ struct AddGoalSheet: View {
         _selectedEmoji = State(initialValue: existingGoal?.emoji ?? Self.iconOptions.first ?? "🎯")
         _selectedColorHex = State(initialValue: existingGoal?.colorHex ?? Self.colorOptions.first?.hex ?? "2B7FFF")
         _name = State(initialValue: existingGoal?.name ?? "")
-        _targetAmount = State(initialValue: Decimal(existingGoal?.targetAmount ?? 0))
-        _currentAmount = State(initialValue: Decimal(existingGoal?.currentAmount ?? 0))
+        if let target = existingGoal?.targetAmount, target > 0 {
+            _targetAmountText = State(initialValue: AmountParsing.formattedString(from: target))
+        } else {
+            _targetAmountText = State(initialValue: "")
+        }
+        if let current = existingGoal?.currentAmount, current > 0 {
+            _currentAmountText = State(initialValue: AmountParsing.formattedString(from: current))
+        } else {
+            _currentAmountText = State(initialValue: "")
+        }
         _hasDeadline = State(initialValue: existingGoal?.deadline != nil)
         _deadline = State(initialValue: existingGoal?.deadline ?? Date())
     }
@@ -69,7 +77,7 @@ struct AddGoalSheet: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Target Amount")
                         .font(.system(size: 16, weight: .semibold))
-                    TextField("$0.00", value: $targetAmount, format: .currency(code: "USD"))
+                    TextField("$0.00", text: $targetAmountText)
                         .keyboardType(.decimalPad)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
@@ -80,7 +88,7 @@ struct AddGoalSheet: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Current Amount")
                         .font(.system(size: 16, weight: .semibold))
-                    TextField("$0.00", value: $currentAmount, format: .currency(code: "USD"))
+                    TextField("$0.00", text: $currentAmountText)
                         .keyboardType(.decimalPad)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
@@ -172,9 +180,9 @@ struct AddGoalSheet: View {
     private func saveGoal() {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
-        let target = NSDecimalNumber(decimal: targetAmount).doubleValue
+        let target = AmountParsing.parse(targetAmountText)
         guard target > 0 else { return }
-        let current = NSDecimalNumber(decimal: currentAmount).doubleValue
+        let current = AmountParsing.parse(currentAmountText)
         let finalDeadline = hasDeadline ? deadline : nil
 
         if let goal = existingGoal {
@@ -202,7 +210,7 @@ struct AddGoalSheet: View {
 
     private var canSave: Bool {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let target = NSDecimalNumber(decimal: targetAmount).doubleValue
+        let target = AmountParsing.parse(targetAmountText)
         return !trimmedName.isEmpty && target > 0
     }
 }

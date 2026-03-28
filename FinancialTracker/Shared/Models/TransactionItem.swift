@@ -44,7 +44,7 @@ final class TransactionItem: Identifiable {
 
     // Accessor for account enum.
     var account: AccountType {
-        get { AccountType(rawValue: accountRaw) ?? .debitCard }
+        get { AccountType.resolve(accountRaw) }
         set { accountRaw = newValue.rawValue }
     }
 
