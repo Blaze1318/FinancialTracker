@@ -14,7 +14,7 @@ struct FinancialTrackerApp: App {
     init() {
         let bundleId = Bundle.main.bundleIdentifier ?? "com.tracker.FinancialTracker"
         let cloudContainerId = "iCloud.\(bundleId)"
-        let schema = Schema([Account.self, TransactionItem.self, Goal.self])
+        let schema = Schema([Account.self, CustomAccount.self, TransactionItem.self, Goal.self, Budget.self])
 
         do {
             let cloudConfig = ModelConfiguration(
@@ -27,8 +27,10 @@ struct FinancialTrackerApp: App {
             )
             self.modelContainer = try ModelContainer(
                 for: Account.self,
+                CustomAccount.self,
                 TransactionItem.self,
                 Goal.self,
+                Budget.self,
                 configurations: cloudConfig
             )
         } catch {
@@ -42,11 +44,13 @@ struct FinancialTrackerApp: App {
                     cloudKitDatabase: .none
                 )
                 self.modelContainer = try ModelContainer(
-                    for: Account.self,
-                    TransactionItem.self,
-                    Goal.self,
-                    configurations: fallbackConfig
-                )
+                for: Account.self,
+                CustomAccount.self,
+                TransactionItem.self,
+                Goal.self,
+                Budget.self,
+                configurations: fallbackConfig
+            )
             } catch {
                 fatalError("Failed to initialize SwiftData container: \(error)")
             }

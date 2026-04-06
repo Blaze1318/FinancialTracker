@@ -32,7 +32,8 @@ enum TransactionsCSVBuilder {
     static func buildCSV(
         transactions: [TransactionItem],
         summaryTitle: String,
-        summaryTotal: Double
+        summaryTotal: Double,
+        customAccountsById: [UUID: CustomAccount]
     ) -> Data? {
         var rows: [String] = []
         let incomeTransactions = transactions.filter { $0.type == .income }
@@ -56,7 +57,7 @@ enum TransactionsCSVBuilder {
                 dateFormatter.string(from: transaction.date),
                 escapeCSV(transaction.title),
                 escapeCSV(transaction.category.title),
-                transaction.account.rawValue,
+                escapeCSV(transaction.accountDisplayName(customAccountsById: customAccountsById)),
                 escapeCSV(formatAmount(transaction.amount)),
                 escapeCSV(transaction.subtitle)
             ].joined(separator: ","))
@@ -70,7 +71,7 @@ enum TransactionsCSVBuilder {
                 dateFormatter.string(from: transaction.date),
                 escapeCSV(transaction.title),
                 escapeCSV(transaction.category.title),
-                transaction.account.rawValue,
+                escapeCSV(transaction.accountDisplayName(customAccountsById: customAccountsById)),
                 escapeCSV(formatAmount(transaction.amount)),
                 escapeCSV(transaction.subtitle)
             ].joined(separator: ","))

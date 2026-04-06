@@ -13,12 +13,14 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TransactionItem.date, order: .reverse) private var transactions: [TransactionItem]
     @Query private var accounts: [Account]
+    @Query(sort: \CustomAccount.name) private var customAccounts: [CustomAccount]
     @Query(sort: \Goal.name) private var goals: [Goal]
+    @Query(sort: \Budget.createdAt) private var budgets: [Budget]
 
     @State private var isAddTransactionPresented = false
     @State private var isAddGoalPresented = false
     @State private var selectedMonth: Date = Date()
-    @State private var selectedTab: DashboardTab = .transactions
+    @State private var selectedTab: DashboardTab = .activity
     @State private var selectedSummary: AccountSummary = .all
     @State private var isMonthPickerPresented = false
     @State private var actionTransaction: TransactionItem?
@@ -30,6 +32,12 @@ struct DashboardView: View {
     @State private var goalForAddMoney: Goal?
     @State private var celebrationGoalName: String?
     @State private var goalToDelete: Goal?
+    @State private var isAddCustomAccountPresented = false
+    @State private var customAccountToEdit: CustomAccount?
+    @State private var customAccountToDelete: CustomAccount?
+    @State private var isAddBudgetPresented = false
+    @State private var budgetToEdit: Budget?
+    @State private var budgetToDelete: Budget?
 
     // Screen UI.
     var body: some View {
@@ -45,96 +53,51 @@ struct DashboardView: View {
                     Text("Manage your finances with ease")
                         .padding(.horizontal, 10)
 
-                HStack {
-                    FinanceSummaryCard(
-                        icon: "wallet.pass",
-                        title: "All Accounts",
-                        amount: summaryTotal(for: .all),
-                        gradientStart: AppColors.blue,
-                        gradientEnd: AppColors.cyan
-                    )
-                    .overlay(selectionOverlay(isSelected: selectedSummary == .all, accent: AppColors.cyan))
-                    .padding(.horizontal, 8)
-                    .onTapGesture { selectedSummary = .all }
-
-                    FinanceSummaryCard(
-                        icon: "creditcard",
-                        title: "Debit Card",
-                        amount: summaryTotal(for: .debitCard),
-                        gradientStart: AppColors.green,
-                        gradientEnd: AppColors.teal
-                    )
-                    .overlay(selectionOverlay(isSelected: selectedSummary == .debitCard, accent: AppColors.teal))
-                    .overlay(alignment: .topTrailing) {
-                        Button {
-                            accountToEdit = .debitCard
-                        } label: {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 26, height: 26)
-                                .background(Color.black.opacity(0.25))
-                                .clipShape(Circle())
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    ForEach(accountSummaries, id: \.id) { summary in
+                        FinanceSummaryCard(
+                            icon: summary.iconName(customAccountsById: customAccountsById),
+                            title: summary.title(customAccountsById: customAccountsById),
+                            amount: summaryTotal(for: summary),
+                            gradientStart: summary.gradientStart(customAccountsById: customAccountsById),
+                            gradientEnd: summary.gradientEnd(customAccountsById: customAccountsById)
+                        )
+                        .overlay(
+                            selectionOverlay(
+                                isSelected: selectedSummary == summary,
+                                accent: summary.accent(customAccountsById: customAccountsById)
+                            )
+                        )
+                        .overlay(alignment: .topTrailing) {
+                            summaryActionButton(for: summary)
                         }
-                        .padding(10)
+                        .padding(.horizontal, 8)
+                        .onTapGesture { selectedSummary = summary }
                     }
-                    .padding(.horizontal, 8)
-                    .onTapGesture { selectedSummary = .debitCard }
-                    .onLongPressGesture { accountToEdit = .debitCard }
                 }
-                HStack {
-                    FinanceSummaryCard(
-                        icon: "creditcard",
-                        title: "Credit Card",
-                        amount: summaryTotal(for: .creditCard),
-                        gradientStart: AppColors.pink,
-                        gradientEnd: AppColors.coral
-                    )
-                    .overlay(selectionOverlay(isSelected: selectedSummary == .creditCard, accent: AppColors.coral))
-                    .overlay(alignment: .topTrailing) {
-                        Button {
-                            accountToEdit = .creditCard
-                        } label: {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 26, height: 26)
-                                .background(Color.black.opacity(0.25))
-                                .clipShape(Circle())
-                        }
-                        .padding(10)
-                    }
-                    .padding(.horizontal, 8)
-                    .onTapGesture { selectedSummary = .creditCard }
-                    .onLongPressGesture { accountToEdit = .creditCard }
+                .padding(.bottom, 8)
 
-                    FinanceSummaryCard(
-                        icon: "dollarsign.circle.fill",
-                        title: "Savings",
-                        amount: summaryTotal(for: .savings),
-                        gradientStart: AppColors.purple,
-                        gradientEnd: AppColors.lavender
-                    )
-                    .overlay(selectionOverlay(isSelected: selectedSummary == .savings, accent: AppColors.lavender))
-                    .overlay(alignment: .topTrailing) {
-                        Button {
-                            accountToEdit = .savings
-                        } label: {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 26, height: 26)
-                                .background(Color.black.opacity(0.25))
-                                .clipShape(Circle())
-                        }
-                        .padding(10)
+                Button {
+                    isAddCustomAccountPresented = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .bold))
+                        Text("Add New Account")
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                    .padding(.horizontal, 8)
-                    .onTapGesture { selectedSummary = .savings }
-                    .onLongPressGesture { accountToEdit = .savings }
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.black.opacity(0.2), style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+                            .background(Color.white.opacity(0.6))
+                    )
                 }
+                .padding(.horizontal, 12)
                 FinancialOverviewCard(
-                    title: selectedSummary.title,
+                    title: selectedSummary.title(customAccountsById: customAccountsById),
                     totalAmount: overviewTotals.total,
                     incomeAmount: overviewTotals.income,
                     expensesAmount: overviewTotals.expense,
@@ -173,17 +136,21 @@ struct DashboardView: View {
                             Button {
                                 selectedTab = tab
                             } label: {
-                                Text(tab.title)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        selectedTab == tab
-                                        ? Color.white
-                                        : Color.clear
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                VStack(spacing: 6) {
+                                    Image(systemName: tab.iconName)
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text(tab.title)
+                                        .font(.system(size: 13, weight: .semibold))
+                                }
+                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    selectedTab == tab
+                                    ? Color.white
+                                    : Color.clear
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             }
                         }
                     }
@@ -194,24 +161,38 @@ struct DashboardView: View {
 
                     Group {
                     switch selectedTab {
-                    case .transactions:
+                    case .activity:
                         TransactionsTabView(
                             transactions: filteredTransactions,
-                            exportTransactions: transactionsForSummary(selectedSummary),
+                            exportTransactions: filteredTransactions,
                             totalCount: filteredTransactions.count,
-                            summaryTitle: selectedSummary.title,
-                            summaryTotal: summaryTotal(for: selectedSummary),
-                            exportFilename: TransactionsCSVBuilder.defaultFilename(summaryTitle: selectedSummary.title),
+                            summaryTitle: selectedSummary.title(customAccountsById: customAccountsById),
+                            summaryTotal: filteredMonthNet,
+                            exportFilename: TransactionsCSVBuilder.defaultFilename(
+                                summaryTitle: selectedSummary.title(customAccountsById: customAccountsById)
+                            ),
+                            customAccountsById: customAccountsById,
                             onSelect: { transaction in
                                 actionTransaction = transaction
                                 isTransactionActionPresented = true
                             }
                         )
-                    case .analytics:
+                    case .charts:
                         AnalyticsTabView(
                             spends: analyticsSpends,
                             summary: analyticsSummary,
                             totalForSelectedSummary: summaryTotal(for: selectedSummary)
+                        )
+                    case .budget:
+                        BudgetTabView(
+                            budgets: budgets,
+                            transactions: transactions,
+                            selectedMonth: selectedMonth,
+                            selectedSummary: selectedSummary,
+                            customAccountsById: customAccountsById,
+                            onCreate: { isAddBudgetPresented = true },
+                            onEdit: { budget in budgetToEdit = budget },
+                            onDelete: { budget in budgetToDelete = budget }
                         )
                     case .ai:
                         AIInsightsTabView(context: aiInsightContext)
@@ -232,8 +213,10 @@ struct DashboardView: View {
 
             FloatingActionButtonView {
                 switch selectedTab {
-                case .transactions, .analytics:
+                case .activity, .charts:
                     isAddTransactionPresented = true
+                case .budget:
+                    isAddBudgetPresented = true
                 case .ai:
                     break
                 case .goals:
@@ -261,11 +244,29 @@ struct DashboardView: View {
             )
             .presentationDetents([.large])
         }
+        .sheet(isPresented: $isAddBudgetPresented) {
+            AddBudgetSheet(
+                isPresented: $isAddBudgetPresented,
+                maxDate: Self.maxSelectableDate
+            )
+            .presentationDetents([.large])
+        }
+        .sheet(item: $budgetToEdit) { budget in
+            AddBudgetSheet(
+                isPresented: Binding(
+                    get: { budgetToEdit != nil },
+                    set: { if !$0 { budgetToEdit = nil } }
+                ),
+                maxDate: Self.maxSelectableDate,
+                existingBudget: budget
+            )
+            .presentationDetents([.large])
+        }
         .sheet(item: $accountToEdit) { account in
                 if let accountModel = accountForType(account) {
                     EditAccountBalanceSheet(
                         account: account,
-                        currentTotal: summaryTotal(for: AccountSummary(account: account)),
+                        currentTotal: summaryTotal(for: .system(account)),
                         onSave: { newTotal in
                             let net = netTransactionTotal(for: account)
                             accountModel.baseBalance = newTotal - net
@@ -278,6 +279,20 @@ struct DashboardView: View {
         .sheet(isPresented: $isAddGoalPresented) {
             AddGoalSheet(isPresented: $isAddGoalPresented)
                 .presentationDetents([.large])
+        }
+        .sheet(isPresented: $isAddCustomAccountPresented) {
+            AddCustomAccountSheet(isPresented: $isAddCustomAccountPresented)
+                .presentationDetents([.large])
+        }
+        .sheet(item: $customAccountToEdit) { account in
+            AddCustomAccountSheet(
+                isPresented: Binding(
+                    get: { customAccountToEdit != nil },
+                    set: { if !$0 { customAccountToEdit = nil } }
+                ),
+                existingAccount: account
+            )
+            .presentationDetents([.large])
         }
         .sheet(item: $goalToEdit) { goal in
             AddGoalSheet(
@@ -353,6 +368,38 @@ struct DashboardView: View {
         } message: {
             Text("This action cannot be undone.")
         }
+        .alert("Delete Account?", isPresented: Binding(
+            get: { customAccountToDelete != nil },
+            set: { if !$0 { customAccountToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                guard let account = customAccountToDelete else { return }
+                deleteCustomAccount(account)
+                customAccountToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                customAccountToDelete = nil
+            }
+        } message: {
+            Text("All transactions under this account will be deleted.")
+        }
+        .alert("Delete Budget?", isPresented: Binding(
+            get: { budgetToDelete != nil },
+            set: { if !$0 { budgetToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let budget = budgetToDelete {
+                    modelContext.delete(budget)
+                    try? modelContext.save()
+                }
+                budgetToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                budgetToDelete = nil
+            }
+        } message: {
+            Text("This action cannot be undone.")
+        }
         .task {
             SeedData.seedIfNeeded(context: modelContext)
         }
@@ -383,30 +430,51 @@ private extension DashboardView {
         switch selectedSummary {
         case .all:
             return monthFiltered
-        case .debitCard:
-            return monthFiltered.filter { $0.account == .debitCard }
-        case .creditCard:
-            return monthFiltered.filter { $0.account == .creditCard }
-        case .savings:
-            return monthFiltered.filter { $0.account == .savings }
+        case .system(let account):
+            return monthFiltered.filter { $0.accountSelection == .system(account) }
+        case .custom(let id):
+            return monthFiltered.filter { $0.accountSelection == .custom(id) }
         }
+    }
+
+    var filteredMonthNet: Double {
+        let income = filteredTransactions.filter { $0.type == .income }.map(\.amount).reduce(0, +)
+        let expense = filteredTransactions.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
+        return income - expense
+    }
+
+    var customAccountsById: [UUID: CustomAccount] {
+        Dictionary(uniqueKeysWithValues: customAccounts.map { ($0.id, $0) })
+    }
+
+    var accountSummaries: [AccountSummary] {
+        var summaries: [AccountSummary] = [
+            .all,
+            .system(.debitCard),
+            .system(.creditCard),
+            .system(.savings)
+        ]
+        summaries.append(contentsOf: customAccounts.map { .custom($0.id) })
+        return summaries
     }
 
     // Summary total for the top account cards.
     func summaryTotal(for summary: AccountSummary) -> Double {
-        let scoped = transactionsForSummary(summary)
-        let income = scoped.filter { $0.type == .income }.map(\.amount).reduce(0, +)
-        let expense = scoped.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
-        let net = income - expense
         switch summary {
         case .all:
-            return accountTotal(.debitCard) + accountTotal(.creditCard) + accountTotal(.savings)
-        case .debitCard:
-            return accountBaseBalance(for: .debitCard) + net
-        case .creditCard:
-            return accountBaseBalance(for: .creditCard) + net
-        case .savings:
-            return accountBaseBalance(for: .savings) + net
+            let systemTotal = accountTotal(.debitCard) + accountTotal(.creditCard) + accountTotal(.savings)
+            let customTotal = customAccounts.reduce(0) { total, account in
+                total + customAccountTotal(account.id)
+            }
+            return systemTotal + customTotal
+        case .system(let account):
+            let scoped = transactionsForSummary(summary)
+            let income = scoped.filter { $0.type == .income }.map(\.amount).reduce(0, +)
+            let expense = scoped.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
+            let net = income - expense
+            return accountBaseBalance(for: account) + net
+        case .custom(let id):
+            return customAccountTotal(id)
         }
     }
 
@@ -418,14 +486,12 @@ private extension DashboardView {
         let net = income - expense
         switch selectedSummary {
         case .all:
-            let total = accountTotal(.debitCard) + accountTotal(.creditCard) + accountTotal(.savings)
+            let total = summaryTotal(for: .all)
             return (total, income, expense)
-        case .debitCard:
-            return (accountBaseBalance(for: .debitCard) + net, income, expense)
-        case .creditCard:
-            return (accountBaseBalance(for: .creditCard) + net, income, expense)
-        case .savings:
-            return (accountBaseBalance(for: .savings) + net, income, expense)
+        case .system(let account):
+            return (accountBaseBalance(for: account) + net, income, expense)
+        case .custom(let id):
+            return (customAccountTotal(id), income, expense)
         }
     }
 
@@ -434,21 +500,27 @@ private extension DashboardView {
         switch summary {
         case .all:
             return transactions
-        case .debitCard:
-            return transactions.filter { $0.account == .debitCard }
-        case .creditCard:
-            return transactions.filter { $0.account == .creditCard }
-        case .savings:
-            return transactions.filter { $0.account == .savings }
+        case .system(let account):
+            return transactions.filter { $0.accountSelection == .system(account) }
+        case .custom(let id):
+            return transactions.filter { $0.accountSelection == .custom(id) }
         }
     }
 
     // Net total (income - expenses) for a single account.
     func netTransactionTotal(for account: AccountType) -> Double {
-        let scoped = transactions.filter { $0.account == account }
+        let scoped = transactions.filter { $0.accountSelection == .system(account) }
         let income = scoped.filter { $0.type == .income }.map(\.amount).reduce(0, +)
         let expense = scoped.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
         return income - expense
+    }
+
+    func customAccountTotal(_ id: UUID) -> Double {
+        let scoped = transactions.filter { $0.accountSelection == .custom(id) }
+        let income = scoped.filter { $0.type == .income }.map(\.amount).reduce(0, +)
+        let expense = scoped.filter { $0.type == .expense }.map(\.amount).reduce(0, +)
+        let base = customAccountsById[id]?.baseBalance ?? 0
+        return base + (income - expense)
     }
 
     // Account total = base balance + net transactions.
@@ -469,6 +541,62 @@ private extension DashboardView {
         let created = Account(type: account, baseBalance: 0)
         modelContext.insert(created)
         return created
+    }
+
+    func deleteCustomAccount(_ account: CustomAccount) {
+        let id = account.id
+        let related = transactions.filter { $0.accountSelection == .custom(id) }
+        for transaction in related {
+            modelContext.delete(transaction)
+        }
+        let relatedBudgets = budgets.filter { $0.accountSelection == .custom(id) }
+        for budget in relatedBudgets {
+            modelContext.delete(budget)
+        }
+        modelContext.delete(account)
+        if selectedSummary == .custom(id) {
+            selectedSummary = .all
+        }
+        try? modelContext.save()
+    }
+
+    @ViewBuilder
+    func summaryActionButton(for summary: AccountSummary) -> some View {
+        switch summary {
+        case .system(let account):
+            Button {
+                accountToEdit = account
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .background(Color.black.opacity(0.25))
+                    .clipShape(Circle())
+            }
+            .padding(10)
+        case .custom(let id):
+            if let account = customAccountsById[id] {
+                Menu {
+                    Button("Edit") {
+                        customAccountToEdit = account
+                    }
+                    Button("Delete", role: .destructive) {
+                        customAccountToDelete = account
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(Color.black.opacity(0.25))
+                        .clipShape(Circle())
+                }
+                .padding(10)
+            }
+        case .all:
+            EmptyView()
+        }
     }
 
     // Selected-card highlight overlay.
@@ -517,13 +645,11 @@ private extension DashboardView {
     var analyticsNetBalance: Double {
         switch selectedSummary {
         case .all:
-            return accountTotal(.debitCard) + accountTotal(.creditCard) + accountTotal(.savings)
-        case .debitCard:
-            return accountTotal(.debitCard)
-        case .creditCard:
-            return accountTotal(.creditCard)
-        case .savings:
-            return accountTotal(.savings)
+            return summaryTotal(for: .all)
+        case .system(let account):
+            return accountTotal(account)
+        case .custom(let id):
+            return customAccountTotal(id)
         }
     }
 
@@ -588,8 +714,9 @@ private extension DashboardView {
 }
 
 private enum DashboardTab: String, CaseIterable, Identifiable {
-    case transactions
-    case analytics
+    case activity
+    case charts
+    case budget
     case ai
     case goals
 
@@ -597,54 +724,39 @@ private enum DashboardTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .transactions:
-            return "Transactions"
-        case .analytics:
-            return "Analytics"
+        case .activity:
+            return "Activity"
+        case .charts:
+            return "Charts"
+        case .budget:
+            return "Budget"
         case .ai:
             return "AI"
         case .goals:
             return "Goals"
         }
     }
-}
 
-private enum AccountSummary {
-    case all
-    case debitCard
-    case creditCard
-    case savings
-
-    var title: String {
+    var iconName: String {
         switch self {
-        case .all:
-            return "All Accounts"
-        case .debitCard:
-            return "Debit Card"
-        case .creditCard:
-            return "Credit Card"
-        case .savings:
-            return "Savings"
+        case .activity:
+            return "waveform.path.ecg"
+        case .charts:
+            return "chart.pie"
+        case .budget:
+            return "wallet.pass"
+        case .ai:
+            return "sparkles"
+        case .goals:
+            return "target"
         }
     }
 }
 
-private extension AccountSummary {
-    init(account: AccountType) {
-        switch account {
-        case .debitCard:
-            self = .debitCard
-        case .creditCard:
-            self = .creditCard
-        case .savings:
-            self = .savings
-        }
-    }
-}
 
 // Moved tab content to AnalyticsTabView and TransactionsTabView.
 
 #Preview {
     DashboardView()
-        .modelContainer(for: [Account.self, TransactionItem.self], inMemory: true)
+        .modelContainer(for: [Account.self, CustomAccount.self, TransactionItem.self, Budget.self], inMemory: true)
 }

@@ -9,6 +9,7 @@ struct TransactionsTabView: View {
     let summaryTitle: String
     let summaryTotal: Double
     let exportFilename: String
+    let customAccountsById: [UUID: CustomAccount]
     let onSelect: (TransactionItem) -> Void
     @State private var exportDocument: TransactionsCSVDocument?
     @State private var isExporting = false
@@ -64,7 +65,8 @@ struct TransactionsTabView: View {
         guard let data = TransactionsCSVBuilder.buildCSV(
             transactions: exportTransactions,
             summaryTitle: summaryTitle,
-            summaryTotal: summaryTotal
+            summaryTotal: summaryTotal,
+            customAccountsById: customAccountsById
         ) else { return }
         exportDocument = TransactionsCSVDocument(data: data)
         isExporting = true
@@ -89,6 +91,7 @@ struct TransactionsTabView: View {
         summaryTitle: "All Accounts",
         summaryTotal: 450.0,
         exportFilename: "Transactions-All-Accounts-2026-03-28",
+        customAccountsById: [:],
         onSelect: { _ in }
     )
 }

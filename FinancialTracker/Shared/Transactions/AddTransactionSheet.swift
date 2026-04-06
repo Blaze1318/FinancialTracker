@@ -4,10 +4,11 @@ import SwiftData
 // Sheet for creating or editing a transaction.
 struct AddTransactionSheet: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \CustomAccount.name) private var customAccounts: [CustomAccount]
     @Binding var isPresented: Bool
 
     @State private var transactionType: TransactionType = .expense
-    @State private var account: AccountType = .debitCard
+    @State private var accountSelection: AccountSelection = .system(.debitCard)
     @State private var expenseSelection: ExpenseCategorySelection = .predefined(.foodAndDining)
     @State private var incomeSelection: IncomeCategorySelection = .predefined(.salary)
     @State private var amountText: String = ""
@@ -23,7 +24,7 @@ struct AddTransactionSheet: View {
     ) {
         _isPresented = isPresented
         _transactionType = State(initialValue: existingTransaction?.type ?? .expense)
-        _account = State(initialValue: existingTransaction?.account ?? .debitCard)
+        _accountSelection = State(initialValue: existingTransaction?.accountSelection ?? .system(.debitCard))
         switch existingTransaction?.category {
         case .expense(let category):
             _expenseSelection = State(initialValue: .predefined(category))
@@ -122,9 +123,9 @@ struct AddTransactionSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Account")
                     .font(.system(size: 16, weight: .semibold))
-                Picker("Account", selection: $account) {
-                    ForEach(AccountType.allCases) { account in
-                        Text(account.rawValue).tag(account)
+                Picker("Account", selection: $accountSelection) {
+                    ForEach(accountOptions, id: \.selection) { option in
+                        Text(option.title).tag(option.selection)
                     }
                 }
                 .pickerStyle(.menu)
@@ -245,7 +246,7 @@ struct AddTransactionSheet: View {
                     transaction.subtitle = subtitle
                     transaction.amount = amount
                     transaction.type = transactionType
-                    transaction.account = account
+                    transaction.accountSelection = accountSelection
                     transaction.category = category
                     transaction.date = transactionDate
                 } else {
@@ -255,7 +256,7 @@ struct AddTransactionSheet: View {
                         date: transactionDate,
                         amount: amount,
                         type: transactionType,
-                        account: account,
+                        accountSelection: accountSelection,
                         category: category
                     )
                     modelContext.insert(transaction)
@@ -286,6 +287,21 @@ struct AddTransactionSheet: View {
     private var isEditing: Bool {
         existingTransaction != nil
     }
+
+    private var accountOptions: [AccountOption] {
+        var options = AccountType.allCases.map { account in
+            AccountOption(title: account.rawValue, selection: .system(account))
+        }
+        options.append(contentsOf: customAccounts.map { account in
+            AccountOption(title: account.name, selection: .custom(account.id))
+        })
+        return options
+    }
+}
+
+private struct AccountOption: Hashable {
+    let title: String
+    let selection: AccountSelection
 }
 
 private enum ExpenseCategorySelection: Hashable {
@@ -302,5 +318,5 @@ private enum IncomeCategorySelection: Hashable {
 #Preview("Add Transaction Sheet") {
     AddTransactionSheet(isPresented: .constant(true))
         .presentationDetents([.medium, .large])
-        .modelContainer(for: [Account.self, TransactionItem.self], inMemory: true)
+        .modelContainer(for: [Account.self, CustomAccount.self, TransactionItem.self], inMemory: true)
 }

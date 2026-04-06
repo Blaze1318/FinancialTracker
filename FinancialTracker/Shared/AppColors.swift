@@ -38,4 +38,7 @@ enum AppColors {
     static let coral = Color(hex: "FF637E")
     static let purple = Color(hex: "AD46FF")
     static let lavender = Color(hex: "A684FF")
+    static let orange = Color(hex: "FF8A00")
+    static let red = Color(hex: "FF4D4F")
+    static let indigo = Color(hex: "5B6CFF")
 }
