@@ -45,6 +45,16 @@ extension AccountSummary {
         }
     }
 
+    func iconIsAsset(customAccountsById: [UUID: CustomAccount]) -> Bool {
+        switch self {
+        case .custom(let id):
+            let icon = customAccountsById[id]?.iconName ?? ""
+            return assetIconNames.contains(icon)
+        default:
+            return false
+        }
+    }
+
     func gradientStart(customAccountsById: [UUID: CustomAccount]) -> Color {
         switch self {
         case .all:
@@ -97,5 +107,9 @@ extension AccountSummary {
         case .custom(let id):
             return customAccountsById[id]?.color ?? AppColors.blue
         }
+    }
+
+    private var assetIconNames: Set<String> {
+        ["piggybank"]
     }
 }

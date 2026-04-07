@@ -3,6 +3,7 @@ import SwiftUI
 // Gradient summary card for account totals on the dashboard.
 struct FinanceSummaryCard: View {
     let icon: String
+    let iconIsAsset: Bool
     let title: String
     let amount: Double
     let gradientStart: Color
@@ -11,12 +12,14 @@ struct FinanceSummaryCard: View {
     // Initialize a summary card with gradient and content.
     init(
         icon: String,
+        iconIsAsset: Bool = false,
         title: String,
         amount: Double,
         gradientStart: Color,
         gradientEnd: Color
     ) {
         self.icon = icon
+        self.iconIsAsset = iconIsAsset
         self.title = title
         self.amount = amount
         self.gradientStart = gradientStart
@@ -31,8 +34,16 @@ struct FinanceSummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
+                if iconIsAsset {
+                    Image(icon)
+                        .resizable()
+                        .renderingMode(.template)
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                }
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
             }

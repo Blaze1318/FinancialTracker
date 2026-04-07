@@ -32,8 +32,8 @@ struct AIInsightsTabView: View {
             VStack(spacing: 14) {
                 if !SystemAIInsightsGenerator.isAvailable {
                     AIInsightCard(insight: AIInsight(
-                        title: "Apple Intelligence Unavailable",
-                        message: "This device doesn’t support Apple Intelligence. Insights require a supported device and system settings enabled.",
+                        title: "AI Not Supported",
+                        message: "AI insights aren’t supported on this device.",
                         iconName: "sparkles",
                         accent: AppColors.purple,
                         background: Color(hex: "F3F4F6")

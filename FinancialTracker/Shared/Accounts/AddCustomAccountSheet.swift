@@ -103,8 +103,17 @@ struct AddCustomAccountSheet: View {
                         selectedIcon = option.symbol
                     } label: {
                         VStack(spacing: 6) {
-                            Image(systemName: option.symbol)
-                                .font(.system(size: 22, weight: .semibold))
+                            if option.isAsset {
+                                Image(option.symbol)
+                                    .resizable()
+                                    .renderingMode(.template)
+                                    .scaledToFit()
+                                    .frame(width: 24, height: 24)
+                                    .foregroundStyle(AppColors.blue)
+                            } else {
+                                Image(systemName: option.symbol)
+                                    .font(.system(size: 22, weight: .semibold))
+                            }
                             Text(option.label)
                                 .font(.system(size: 12, weight: .semibold))
                         }
@@ -182,6 +191,7 @@ private extension AddCustomAccountSheet {
     struct IconOption {
         let symbol: String
         let label: String
+        var isAsset: Bool = false
     }
 
     struct ColorOption: Identifiable {
@@ -194,7 +204,7 @@ private extension AddCustomAccountSheet {
     static let iconOptions: [IconOption] = [
         IconOption(symbol: "wallet.pass", label: "Wallet"),
         IconOption(symbol: "creditcard", label: "Card"),
-        IconOption(symbol: "piggy.bank", label: "Piggy Bank"),
+        IconOption(symbol: "piggybank", label: "Piggy Bank", isAsset: true),
         IconOption(symbol: "building.columns", label: "Bank"),
         IconOption(symbol: "banknote", label: "Cash"),
         IconOption(symbol: "dollarsign.circle", label: "Dollar")

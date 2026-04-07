@@ -10,6 +10,7 @@ import SwiftData
 
 // Main dashboard screen: summary cards, filters, tabs, and FAB.
 struct DashboardView: View {
+    @AppStorage("whats_new_seen_v1_2_0") private var whatsNewSeen = false
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TransactionItem.date, order: .reverse) private var transactions: [TransactionItem]
     @Query private var accounts: [Account]
@@ -38,25 +39,59 @@ struct DashboardView: View {
     @State private var isAddBudgetPresented = false
     @State private var budgetToEdit: Budget?
     @State private var budgetToDelete: Budget?
+    @State private var isWhatsNewPresented = false
+    private let accountGridColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
 
     // Screen UI.
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Financial Tracker")
-                        .font(.title)
-                        .fontWeight(.bold)
+                    HStack {
+                        Text("Financial Tracker")
+                            .font(.title)
+                            .fontWeight(.bold)
+                        Spacer()
+                        Button {
+                            isWhatsNewPresented = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("What's New")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.7))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Group {
+                                    if !whatsNewSeen {
+                                        Circle()
+                                            .fill(AppColors.blue)
+                                            .frame(width: 8, height: 8)
+                                            .offset(x: 38, y: -10)
+                                    }
+                                }
+                            )
+                        }
+                    }
                     .padding(.top, 10)
                     .padding(.horizontal, 10)
 
                     Text("Manage your finances with ease")
                         .padding(.horizontal, 10)
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                LazyVGrid(columns: accountGridColumns, spacing: 12) {
                     ForEach(accountSummaries, id: \.id) { summary in
                         FinanceSummaryCard(
                             icon: summary.iconName(customAccountsById: customAccountsById),
+                            iconIsAsset: summary.iconIsAsset(customAccountsById: customAccountsById),
                             title: summary.title(customAccountsById: customAccountsById),
                             amount: summaryTotal(for: summary),
                             gradientStart: summary.gradientStart(customAccountsById: customAccountsById),
@@ -71,10 +106,11 @@ struct DashboardView: View {
                         .overlay(alignment: .topTrailing) {
                             summaryActionButton(for: summary)
                         }
-                        .padding(.horizontal, 8)
                         .onTapGesture { selectedSummary = summary }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
                 .padding(.bottom, 8)
 
                 Button {
@@ -104,7 +140,7 @@ struct DashboardView: View {
                     gradientStart: AppColors.blue,
                     gradientEnd: AppColors.cyan
                 )
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 12)
 
                 Button {
                     isMonthPickerPresented = true
@@ -130,6 +166,7 @@ struct DashboardView: View {
                     }
                     .padding(.horizontal, 12)
                 }
+                .padding(.horizontal, 12)
 
                     HStack(spacing: 6) {
                         ForEach(DashboardTab.allCases) { tab in
@@ -243,6 +280,15 @@ struct DashboardView: View {
                 existingTransaction: transaction
             )
             .presentationDetents([.large])
+        }
+        .sheet(isPresented: $isWhatsNewPresented) {
+            WhatsNewSheet(isPresented: $isWhatsNewPresented)
+                .presentationDetents([.large])
+        }
+        .onChange(of: isWhatsNewPresented) { _, isPresented in
+            if !isPresented {
+                whatsNewSeen = true
+            }
         }
         .sheet(isPresented: $isAddBudgetPresented) {
             AddBudgetSheet(

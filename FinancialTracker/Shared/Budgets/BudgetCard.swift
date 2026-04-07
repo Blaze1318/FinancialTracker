@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BudgetCard: View {
     let title: String
+    let accountName: String
     let amountSpent: Double
     let limitAmount: Double
     let accent: Color
@@ -10,10 +11,15 @@ struct BudgetCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(Color(hex: "0A0A0A"))
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color(hex: "0A0A0A"))
+                    Text(accountName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button(action: onEdit) {
                     Image(systemName: "pencil")

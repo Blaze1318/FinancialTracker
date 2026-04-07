@@ -44,6 +44,7 @@ struct BudgetTabView: View {
                 ForEach(budgetsForMonth) { budget in
                     BudgetCard(
                         title: budget.category.title,
+                        accountName: accountName(for: budget),
                         amountSpent: spentAmount(for: budget),
                         limitAmount: budget.limitAmount,
                         accent: AppColors.green,
@@ -102,6 +103,15 @@ struct BudgetTabView: View {
                 }
                 return false
             }.reduce(0) { $0 + $1.amount }
+        }
+    }
+
+    private func accountName(for budget: Budget) -> String {
+        switch budget.accountSelection {
+        case .system(let account):
+            return account.rawValue
+        case .custom(let id):
+            return customAccountsById[id]?.name ?? "Custom Account"
         }
     }
 }
